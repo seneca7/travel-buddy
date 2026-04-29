@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Aligns cold start window with light theme surface (~Compose md_theme_light_background). -->
+    <color name="travel_buddy_window_background">#FFFFF8F5</color>
+</resources>
