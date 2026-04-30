@@ -7,6 +7,12 @@ on:
     branches: [main]
   workflow_dispatch:
 
+env:
+  # Opt into Node.js 24 ahead of the June 2026 forced switch, so JavaScript
+  # actions (checkout/setup-java/cache/setup-android) stop emitting the
+  # Node 20 deprecation warning. Safe to remove once Node 24 is the default.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   build:
     name: Assemble debug APK

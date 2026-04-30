@@ -1,7 +1,6 @@
 package com.travelbuddy.ui.theme
 
 import androidx.compose.material3.Typography
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
@@ -23,5 +22,4 @@ val TravelBuddyTypography = Typography(
     labelLarge = baseline.labelLarge.copy(fontWeight = FontWeight.Medium, letterSpacing = 0.1.sp),
     labelMedium = baseline.labelMedium.copy(fontWeight = FontWeight.Medium, letterSpacing = 0.1.sp),
     labelSmall = baseline.labelSmall.copy(fontWeight = FontWeight.Medium, letterSpacing = 0.2.sp),
-    defaultFontFamily = FontFamily.SansSerif,
 )
