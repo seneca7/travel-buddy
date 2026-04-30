@@ -11,7 +11,6 @@ import androidx.compose.material.icons.filled.MailOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
@@ -81,7 +80,7 @@ fun TravelBuddyApp() {
         bottomBar = {
             if (showBottomBar) {
                 NavigationBar(
-                    colors = NavigationBarDefaults.colors(containerColor = colorScheme.surfaceContainer),
+                    containerColor = colorScheme.surfaceContainer,
                 ) {
                     tabs.forEach { tab ->
                         val selected = isTabSelected(tab.route, currentRoute)
