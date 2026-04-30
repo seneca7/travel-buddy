@@ -1,0 +1,94 @@
+name: Build Debug APK
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Assemble debug APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Build debug APK
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Upload APK as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: travel-buddy-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Publish to Appetize.io (browser-playable demo)
+        env:
+          APPETIZE_API_TOKEN: ${{ secrets.APPETIZE_API_TOKEN }}
+          APPETIZE_PUBLIC_KEY: ${{ secrets.APPETIZE_PUBLIC_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${APPETIZE_API_TOKEN:-}" ]; then
+            echo "APPETIZE_API_TOKEN not set — skipping Appetize upload."
+            echo "To enable a browser-playable demo:"
+            echo "  1. Sign up at https://appetize.io and copy your API token."
+            echo "  2. Repo → Settings → Secrets and variables → Actions → New repository secret"
+            echo "     Name: APPETIZE_API_TOKEN"
+            echo "  3. Re-run this workflow. The first run prints a publicKey;"
+            echo "     save it as a second secret named APPETIZE_PUBLIC_KEY so future runs update the same demo."
+            exit 0
+          fi
+
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          if [ -z "${APPETIZE_PUBLIC_KEY:-}" ]; then
+            echo "First-time upload — creating new Appetize app entry."
+            response=$(curl --fail-with-body -sS -u "$APPETIZE_API_TOKEN:" \
+              https://api.appetize.io/v1/apps \
+              -F "file=@${APK}" \
+              -F "platform=android")
+          else
+            echo "Updating existing Appetize app: $APPETIZE_PUBLIC_KEY"
+            response=$(curl --fail-with-body -sS -u "$APPETIZE_API_TOKEN:" \
+              "https://api.appetize.io/v1/apps/$APPETIZE_PUBLIC_KEY" \
+              -F "file=@${APK}" \
+              -F "platform=android")
+          fi
+
+          echo "$response"
+          public_key=$(printf '%s' "$response" | grep -o '"publicKey":"[^"]*"' | head -n1 | sed 's/"publicKey":"//;s/"$//')
+          if [ -n "$public_key" ]; then
+            url="https://appetize.io/app/$public_key"
+            echo ""
+            echo "::notice title=Appetize demo URL::$url"
+            echo "Try the app in your browser: $url"
+            if [ -z "${APPETIZE_PUBLIC_KEY:-}" ]; then
+              echo ""
+              echo "Save \"$public_key\" as a repo secret named APPETIZE_PUBLIC_KEY so subsequent builds update this same demo instead of creating new ones."
+            fi
+          fi

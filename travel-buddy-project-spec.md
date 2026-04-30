@@ -64,6 +64,11 @@ Travel Buddy is an Android app that matches travelers by destination, date overl
 - Firebase Cloud Messaging
 - Google Maps later
 
+## Build & Distribution
+- GitHub Actions workflow `Build Debug APK` runs on every push, uploads `app-debug.apk` as a workflow artifact (sideloadable).
+- Optional: Appetize.io publishing for a browser-playable demo URL when the `APPETIZE_API_TOKEN` repo secret is set. See README for setup.
+- Production distribution (signed release APK / Play Store internal track) is deferred until Firebase Auth + Firestore are wired.
+
 ## Retention and Gamification
 - Trip readiness meter
 - Quest system
