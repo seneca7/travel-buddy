@@ -192,3 +192,60 @@ Phase 1 is complete when **all** of these are true:
 - Scorer has unit tests covering all six dimensions (Sprint A item 4).
 
 Until then, calling Phase 1 "done" is misleading.
+
+---
+
+## Web prototype (snapshot 2026-05-05)
+
+A Next.js 16 + TypeScript + Tailwind v4 prototype lives alongside the Android app at `C:/Perplexity/travel-buddy-web/` (separate codebase, separate GitHub repo). Built to (a) test product direction in a browser without sideloading APKs, (b) carry the same matching scorer + sample data so design decisions transfer 1:1 to Android, (c) double as a marketing/landing surface for the same product.
+
+### Stack
+- **Next.js 16.2 (App Router) + React 19**, TypeScript strict, Tailwind v4 with custom theme tokens (terracotta + sand + accent green).
+- **Framer Motion** for hero magnetic heading, scroll-reveals, animated counters, ticker, hover lifts.
+- **Inter (UI) + Fraunces (display)** via `next/font/google`.
+- **lucide-react 1.x** icons + inline brand SVGs for Apple/Google/Instagram (lucide v1 dropped branded icons for trademark reasons).
+- **No backend yet.** Same shape as Android: pure-TS scorer + in-memory React-Context store; Firebase wires in Sprint B for both.
+
+### Routes
+**Marketing (root layout, full-bleed):**
+- `/` — landing page, AIDA structure (Hero → Bento Grid features → Counters + testimonials + press → CTA section + Footer).
+- `/signup` — registration screen with three social-OAuth buttons (Continue with Google / Apple / Instagram) + Sign up with email. Mock for now: each button shows a 700 ms "Connecting…" spinner then routes to `/app`.
+
+**App (separate `(/app)` layout: phone-frame + bottom nav, mobile-first):**
+- `/app` — Home cockpit: destination hero photo, countdown, adaptive CTA, 4-chip readiness, photo carousel of fellow travelers in the user's city.
+- `/app/create` — 3-step trip composer (destination picker with 12 city tiles, date range, vibe chips).
+- `/app/matches` — bucketed feed (Strong fits / Worth a look) with photo cards + narrative compatibility ("In town Jul 12–17 — both into food walks, museum mornings"); filter chips for exact / ±3 days / other cities.
+- `/app/profile/[id]` — hero photo, verification badges, 6-dimension compatibility bars, their trip card, sticky "Say hi" CTA.
+- `/app/join/[id]` — 2-step join request (proposal type → personalize message + meetup suggestion).
+- `/app/chat` and `/app/chat/[id]` — locked-until-accepted thread with simulated peer accept; tools row (location / propose meetup / unsafe) appears post-accept.
+- `/app/plan` — per-day itinerary, morning/afternoon/evening slots, vibe-tagged activity chips.
+- `/app/safety` — status-driven cards (verified / emergency contact / itinerary shared) + SOS + tools + principles.
+- `/app/notifications` — earned bell, lists join requests.
+
+### Real underneath
+- **Pure TS matching scorer** at `src/lib/scorer.ts` using the spec weights (40/25/15/10/5/5). Returns a full breakdown so the UI renders the "why."
+- **12 sample travelers** with `randomuser.me` portraits and 12 sample trips across 5 destinations (4 in Lisbon overlapping the demo user's dates, etc.). Destination hero photos via Unsplash.
+- **React Context store** (`src/lib/store.tsx`) for trip draft, published trip, join requests, chat threads, itineraries.
+
+### Design moves applied (from earlier UX critique)
+- Cockpit-style Home (replaced list-style)
+- Photo-first match cards with narrative compatibility (replaced numeric "Score 87")
+- Visual destination picker with city tiles (replaced free-text destination input)
+- Status-driven Safety cards (replaced principles wall)
+- Bell-in-top-bar Notifications (Notifications no longer a dead route)
+- Magnetic headline + Bento grid + AIDA flow on landing
+- Three-button OAuth signup: Google / Apple / Instagram (the latter targets the 20–30 cohort that uses IG as primary identity)
+
+### Still missing on web (mirror of Android gaps)
+- No real auth wiring — OAuth buttons are visual-only.
+- No persistence beyond in-memory React state.
+- No tests yet (same Sprint A item).
+- No deployment — runs `next dev` locally; Vercel deploy is one-click after first `gh repo create`.
+
+### How web and Android stay in sync
+The web app is a *design + scorer* prototype, not a separate product. As decisions land:
+- Scorer changes → port both directions (TS ↔ Kotlin) until the Sprint A scorer ships in Kotlin tests.
+- Firestore schema decisions (Sprint B) apply to both clients identically.
+- Sample-data shape (`Profile` / `Trip` / `JoinRequest`) is the contract both will read from Firestore once auth lands.
+
+If web traction is stronger after first user tests, candidate path is to wrap web with **Capacitor** for App Store / Play Store distribution and retire the Android Compose codebase. Decision deferred until at least one round of user feedback on each.
