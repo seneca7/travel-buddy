@@ -195,7 +195,13 @@ Until then, calling Phase 1 "done" is misleading.
 
 ---
 
-## Web prototype (snapshot 2026-05-05)
+## Web prototype — now branded as Mappal (snapshot 2026-05-05)
+
+**Brand:** the web prototype has been rebranded to **Mappal** (tagline: *"Map your trip. Find your pal."*). The Android codebase still uses "Travel Buddy" — rebrand will happen at the same time as the Capacitor decision (one repo wins). Domain: [mappal.app](https://mappal.app). GitHub: [mikeLackovcan/travel-buddy-web](https://github.com/mikeLackovcan/travel-buddy-web).
+
+**Naming research summary** — the travel-buddy namespace is brutally saturated. Killed candidates: Roamie (5+ existing brands), Trippa (`trippa.io` does identical product), Tripsy (established Apple-only planner), Tomo (Web3 social wallet), Buddi/TravelPal (6+ direct competitors), Tagalong, Sameway, Pathmate, Voyy, Trippl, Overlap (literally an acquired competitor), Pacto (Mexican fintech, $34M), Folk (CRM). Mappal survived because the only existing presence is a defunct 2016 hackathon project; `.com` is premium ($500-3k via HugeDomains) but `.app` is free at standard rate.
+
+
 
 A Next.js 16 + TypeScript + Tailwind v4 prototype lives alongside the Android app at `C:/Perplexity/travel-buddy-web/` (separate codebase, separate GitHub repo). Built to (a) test product direction in a browser without sideloading APKs, (b) carry the same matching scorer + sample data so design decisions transfer 1:1 to Android, (c) double as a marketing/landing surface for the same product.
 
