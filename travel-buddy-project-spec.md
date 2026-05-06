@@ -198,7 +198,10 @@ Until then, calling Phase 1 "done" is misleading.
 ## Web prototype — Mappal with auth + analytics (snapshot 2026-05-07)
 
 **New since 2026-05-05:**
-- **Auth.js v5 (`next-auth@5.0.0-beta.31`) wired** with Google OAuth provider. Works once `AUTH_SECRET` + `AUTH_GOOGLE_ID` + `AUTH_GOOGLE_SECRET` + `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true` are set. Apple, Instagram, and email buttons stay mocked and now show a small "demo" badge so reviewers don't mistake them for production. Apple needs a paid Apple Developer account; Instagram requires Meta business verification + App Review (Basic Display API was deprecated late 2024). WhatsApp OTP discussed as v2 (phone-OTP via Twilio Verify, ~$0.005-0.05 per code) — not yet implemented.
+- **Auth.js v5 (`next-auth@5.0.0-beta.31`) wired** with **Google + Instagram** OAuth providers, both env-gated. Google works once `AUTH_GOOGLE_ID/SECRET` + `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true` set; Instagram works once `AUTH_INSTAGRAM_ID/SECRET` + `NEXT_PUBLIC_INSTAGRAM_AUTH_ENABLED=true` set. Without env vars both buttons stay mocked and show a small "demo" badge.
+- **Apple sign-in dropped** from scope ($99/yr Apple Developer subscription not justified at prototype stage).
+- **Instagram caveat:** Auth.js's built-in Instagram provider hits the legacy Basic Display API which Meta deprecated late 2024. Works for testers registered in the Meta App's Roles panel today; production access requires Meta App Review (Privacy Policy URL, Data Deletion endpoint, screencast walkthrough — 2-4 weeks). May need migration to custom Meta Login for Business OAuth flow once Basic Display is fully off.
+- **WhatsApp OTP** still candidate for v2 (phone-OTP via Twilio Verify, ~$0.005-0.05 per code) — not yet implemented; user requested wiring it after Google + Instagram are confirmed working.
 - **Google Analytics 4** loaded conditionally via `@next/third-parties/google` when `NEXT_PUBLIC_GA_MEASUREMENT_ID` is set.
 - **TopBar `AccountMenu`** — shows avatar + name + email dropdown with Sign out when session present; small "Sign in" link otherwise.
 - **API routes** — `/api/auth/[...nextauth]` exports `handlers` from `src/auth.ts`. `/api/auth/{providers,csrf,session}` all return 200.
