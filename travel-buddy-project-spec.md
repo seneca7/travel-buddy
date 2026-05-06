@@ -195,7 +195,17 @@ Until then, calling Phase 1 "done" is misleading.
 
 ---
 
-## Web prototype — now branded as Mappal (snapshot 2026-05-05)
+## Web prototype — Mappal with auth + analytics (snapshot 2026-05-07)
+
+**New since 2026-05-05:**
+- **Auth.js v5 (`next-auth@5.0.0-beta.31`) wired** with Google OAuth provider. Works once `AUTH_SECRET` + `AUTH_GOOGLE_ID` + `AUTH_GOOGLE_SECRET` + `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true` are set. Apple, Instagram, and email buttons stay mocked and now show a small "demo" badge so reviewers don't mistake them for production. Apple needs a paid Apple Developer account; Instagram requires Meta business verification + App Review (Basic Display API was deprecated late 2024). WhatsApp OTP discussed as v2 (phone-OTP via Twilio Verify, ~$0.005-0.05 per code) — not yet implemented.
+- **Google Analytics 4** loaded conditionally via `@next/third-parties/google` when `NEXT_PUBLIC_GA_MEASUREMENT_ID` is set.
+- **TopBar `AccountMenu`** — shows avatar + name + email dropdown with Sign out when session present; small "Sign in" link otherwise.
+- **API routes** — `/api/auth/[...nextauth]` exports `handlers` from `src/auth.ts`. `/api/auth/{providers,csrf,session}` all return 200.
+- **Dev fallback** — `auth.ts` uses a `DEV_SECRET` constant when `AUTH_SECRET` isn't set so the prototype boots without env vars; throws in production if missing.
+- **`.env.example`** with full setup instructions for each provider.
+
+
 
 **Brand:** the web prototype has been rebranded to **Mappal** (tagline: *"Map your trip. Find your pal."*). The Android codebase still uses "Travel Buddy" — rebrand will happen at the same time as the Capacitor decision (one repo wins). Domain: [mappal.app](https://mappal.app). GitHub: [mikeLackovcan/travel-buddy-web](https://github.com/mikeLackovcan/travel-buddy-web).
 
