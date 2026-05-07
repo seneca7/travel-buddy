@@ -125,7 +125,7 @@ Honest read of what exists in the codebase today vs. what the product spec above
 - **No persistence anywhere.** Every state lives in `TravelViewModel` and dies with the process. Trip publish, join requests, and chat input are all in-memory.
 - **No backend / no Firebase.** The "Tech Stack" lists Firebase Auth + Firestore + FCM; none of it is integrated. No `google-services.json`, no auth screens, no Firestore wiring, no FCM.
 - **Scorer not yet wired into the UI.** `Scorer.score(...)` exists and is tested, but the Matches feed still renders three hardcoded `MatchProfile` rows. The wiring lands when the repository (Sprint A item 2) replaces sample data.
-- **Domain model still 4 of 13 entities.** Done: `Profile`, `Trip`, `Vibe` (enum support type), `Budget` (enum support type). Still missing: `User`, `JoinRequest`, `Match`, `ChatThread`, `Message`, `Notification`, `Badge`, `UserBadge`, `Quest`, `UserProgress`, `Report`. Legacy UI DTOs (`MatchProfile`, `PendingChatPreview`, `TripDraft`) coexist and will be retired or repurposed when Sprint B replaces sample data.
+- **Domain model still 5 of 13 entities.** Done: `Profile`, `Trip`, `JoinRequest`, `Vibe` (enum support type), `Budget` (enum support type). Still missing: `User`, `Match`, `ChatThread`, `Message`, `Notification`, `Badge`, `UserBadge`, `Quest`, `UserProgress`, `Report`. Legacy UI DTOs (`MatchProfile`, `PendingChatPreview`, `TripDraft`) coexist and will be retired or repurposed when Sprint B replaces sample data. `JoinRequest` mirrors the web prototype's TS type 1:1 (proposal/status enums, optional activityId/Label, sentAt as epoch millis) for Firestore parity.
 - **No Onboarding / Signup / Login / Profile Setup / Settings screens.** Listed in MVP Features and Key Screens; not present.
 - **Notifications screen is unreachable.** `AppRoute.Notifications` route is registered but no UI navigates to it (no tab, no link). Dead code.
 - **Safety report + block list are static placeholder screens** — no intake form, no moderator queue, no block-list state.
@@ -256,6 +256,8 @@ A Next.js 16 + TypeScript + Tailwind v4 prototype lives alongside the Android ap
 - Bell-in-top-bar Notifications (Notifications no longer a dead route)
 - Magnetic headline + Bento grid + AIDA flow on landing
 - Three-button OAuth signup: Google / Apple / Instagram (the latter targets the 20–30 cohort that uses IG as primary identity)
+- **2026-05-07** Home countdown forward-framed ("X days until departure" replaces "X days to go" — neutral framing instead of mild loss frame).
+- **2026-05-07** Join request flow rewritten to fight templated openers: empty default message + structured placeholder asking for one specific shared moment (self-disclosure reciprocity, the mechanism Hinge built a moat on); meetup field now prompts for an explicit if-then plan (Gollwitzer's implementation intentions roughly double follow-through); explicit "no pressure either way" block above the send button — paradoxically raises response quality because honest declines stop being socially costly.
 
 ### Still missing on web (mirror of Android gaps)
 - No real auth wiring — OAuth buttons are visual-only.
