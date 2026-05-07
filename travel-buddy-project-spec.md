@@ -197,6 +197,47 @@ Until then, calling Phase 1 "done" is misleading.
 
 ---
 
+## Web prototype — Sprint 5: Reputation + Firebase scaffold (snapshot 2026-05-07 late night)
+
+Closes the social loop with verified meets, and adds the persistence layer so user profile actually survives across sessions when Firebase is provisioned.
+
+### "I met them" reputation
+- New `Meeting` type with `requestId`, `myUserId`, `peerUserId`, `proposedDate`, `activityLabel`, `myConfirmation` and `peerConfirmation` (`pending | yes | no`).
+- `Profile.verifiedMeets?: number` populated across all sample profiles (range 2–18 for travelers, 28–64 for locals — locals have higher rep because they host).
+- Store auto-creates a `Meeting` whenever an incoming join request is accepted, snapshotting the activity label + date.
+- One **demo meeting seeded** with Sara (Sintra day trip Jul 16) so first-run users can immediately practice the confirmation flow.
+- `confirmMeeting(id, mine)` action: user picks Yes / Not yet / Didn't meet. After "yes" the peer confirmation is auto-set after 1.4s (mocking real-time peer reply) so the demo's reputation count visibly bumps.
+- Derived `myVerifiedMeets` count = meetings where both sides said yes.
+- New **`MeetingPrompt`** component (card + banner variants):
+  - In **Inbox** at the top: "Confirm your meets" section listing pending meetings.
+  - In **Chat thread** (post-accept): banner above messages prompting confirmation.
+- **Profile detail** hero now shows a green `✓ N verified meets` badge alongside Verified + reply rate.
+- **Match cards** show a small `✓N` badge for travelers with ≥5 verified meets.
+- **`/app/me`** header shows the user's running verified-meets count.
+
+### Firebase scaffold (env-gated, optional)
+- `firebase` (client) + `firebase-admin` (server) installed.
+- **Safe-init pattern**: client + admin init files return `null` when env vars are missing. All callers must handle null. The prototype runs in fully in-memory mode unless Firebase is provisioned.
+- **`src/lib/firebase/client.ts`** — `getFirebaseApp()` + `getDb()`. Cached. Reads `NEXT_PUBLIC_FIREBASE_*` config.
+- **`src/lib/firebase/admin.ts`** — `getAdminApp()` + `getAdminDb()`. `server-only` import, reads `FIREBASE_ADMIN_*` env. Strips `\n` escapes from PEM private key.
+- **`src/lib/firebase/profileRepo.ts`** — `StoredProfile` shape, `getProfile(uid)`, `upsertProfileOnSignIn({uid, email, name, photo})`, `patchProfileFields(uid, patch)`. All no-op when Admin not configured.
+- **Auth.js `events.signIn` hook** — calls `upsertProfileOnSignIn` when a user signs in via Google or Facebook. Creates a `users/{uid}` doc on first sign-in (with `createdAt`), patches `email/name/photo/updatedAt` on subsequent sign-ins without clobbering user-edited fields.
+- **`/app/me` Save** now also calls a server action `saveProfileAction(patch)` that writes to Firestore. The local store always reflects the change regardless; persistence is best-effort.
+- **`uid` strategy**: email is used as the doc ID. Auth.js JWT strategy doesn't expose a stable provider id without an adapter; email is unique per user for our purposes. (When we add an adapter later, switch to provider id.)
+
+### Setup walkthrough (in README)
+- Firebase project create → Web app register → Firestore enable → Service account JSON → 9 env vars
+- Firestore security rules locked down: client read of own doc only, all writes through Admin SDK (server actions).
+- Documented in both `.env.example` and `README.md` "Firebase + Firestore" section.
+
+### Sprint 6 still pending
+- Real-time chat via Firestore listeners (replaces the current local echo)
+- FCM for push notifications on join requests + accepts + chat replies
+- Hostel partnership integration
+- Live-location sharing during meetups
+
+---
+
 ## Web prototype — Sprint 4: Onboarding, Profile setup, Locals supply (snapshot 2026-05-07 night)
 
 Three additions that close the prototype gap to "actually usable for first-time users" and add the supply-side moat:
