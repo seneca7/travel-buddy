@@ -197,7 +197,40 @@ Until then, calling Phase 1 "done" is misleading.
 
 ---
 
-## Web prototype — Mappal with auth + analytics (snapshot 2026-05-07)
+## Web prototype — Mappal Sprint 1 + 2 + Map (snapshot 2026-05-07 evening)
+
+**New since this morning** — applied the full UX re-architecture from the deep analysis:
+
+### Plan as a social object (Sprint 1)
+- **`ItineraryActivity` extended**: optional `startTime`, `location`, `note`, plus the social signal **`openToBuddy`** (default off; opt-in when planning) and `maxBuddies` cap. `buddies[]` array tracks confirmed companions once a request is accepted.
+- **`ActivitySheet` bottom-sheet modal** ([src/components/ActivitySheet.tsx](https://github.com/mikeLackovcan/travel-buddy-web/blob/main/src/components/ActivitySheet.tsx)): full custom activity input with quick-pick suggestions on top, free-text title, slot picker, time, place, vibe chips, note, and the open-to-buddy toggle with cap (1 / 2 / 3 / 5 / any). Used for both add and edit; framer-motion spring slide-up.
+- **Plan screen rewritten** to use the sheet — every slot has its own "+ Add activity" button; tapping any activity reopens the sheet in edit mode. Header now reports `N planned · M open to buddies`.
+- **`SAMPLE_ITINERARIES`** seeded for sample travelers (Sara, Marek, Yuna in Lisbon) with a mix of open and private activities — gives Profile and Map something real to show.
+
+### Two-sided social loop (Sprint 2)
+- **`/app/inbox`**: the *receiving* side that didn't exist before. Lists pending incoming requests with traveler photo + verified badge + the specific activity they want to join (resolved from peer's plan), the message, and the suggested meetup. Accept / Decline buttons. On Accept: status flips, the proposed activity drops into the user's own itinerary (auto-add via store reducer), and a system "Accepted" message lands in the chat thread.
+- **Profile shows "Sara's open plans · 3"** section — tappable cards that deep-link into the Join flow with `?activityId=…` so the request carries the activity reference.
+- **Join flow updated**: when arriving with `?activityId=…`, step 0 (proposal type) is skipped, the proposed activity is rendered in a primary-soft preview card, and the JoinRequest stores `activityId` + `activityLabel` snapshot.
+- **Match cards** now show `N open` accent badge so discovery surfaces "people with open plans" prominently.
+- **Store extended**: separate `incoming[]` from `joinRequests[]`, new `acceptIncoming` and `declineIncoming` actions, auto-add behavior on accept. One demo incoming request seeded so the Inbox is never empty on first run.
+
+### Map view (Sprint 3 brand-aligned)
+- The product is named **Mappal** — having no map was on-brand failure. Fixed:
+- **Leaflet + `react-leaflet` + OpenStreetMap tiles** (free, no API key).
+- **`/app/map`**: city-focused map centered on the user's destination with avatar markers for all sample travelers. The user's own location ringed in primary terracotta; others ringed in accent green. Tap a marker → popup with name, dates, and "See profile" link. Bottom-sheet horizontal carousel of in-city travelers below the map.
+- **Lat/lng added** to all 12 destinations in `sample-data.ts`.
+- **`<MapContainer>` dynamically imported with `ssr: false`** (Leaflet uses `window`).
+- **Bottom nav re-organized**: `Home / Map / Plan / Chat / Safety` — *Matches* removed from primary nav (still reachable as "See all" from Home; the Map and Profile-level open-plans cover discovery better).
+- **TopBar "bell" → Inbox** — repurposed the icon to point at `/app/inbox` with a count badge of pending requests.
+
+### Deferred to Sprint 4 (call out in roadmap)
+- Real-time location sharing during meetups
+- "I met them" reciprocal confirmation → reputation signals
+- Today feed combining map + open activities (the map currently does this job)
+- Onboarding wizard for first-time users
+- Profile setup screen (bio, vibes, languages, budget) — currently implicit from Google sign-in
+
+
 
 **New since 2026-05-05:**
 - **Auth.js v5 (`next-auth@5.0.0-beta.31`) wired** with **Google + Facebook + Instagram** OAuth providers, all env-gated. Facebook (added 2026-05-07) uses the standard Auth.js Facebook provider — easiest of the Meta-family providers because it doesn't depend on the deprecated Basic Display API. Same Meta Developer App can host Facebook Login + Instagram Login products simultaneously. Google works once `AUTH_GOOGLE_ID/SECRET` + `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true` set; Instagram works once `AUTH_INSTAGRAM_ID/SECRET` + `NEXT_PUBLIC_INSTAGRAM_AUTH_ENABLED=true` set. Without env vars both buttons stay mocked and show a small "demo" badge.
