@@ -116,14 +116,16 @@ Honest read of what exists in the codebase today vs. what the product spec above
 - **Matches feed**: 3 hardcoded `MatchProfile` rows displayed as cards.
 - **Join request → chat bridge**: `rememberJoinSent()` stashes a `PendingChatPreview` so the next visit to Chat shows a fake echo thread.
 - **Safety center**: principles card, SOS card, two placeholder sub-screens (block list, report intake).
-- **CI**: `Build Debug APK` workflow assembles `app-debug.apk`, uploads gradle log + APK as artifacts, optionally publishes to Appetize.io when `APPETIZE_API_TOKEN` (and optionally `APPETIZE_PUBLIC_KEY`) are set as repo secrets.
+- **CI**: `Build Debug APK` workflow runs `testDebugUnitTest` first (fail-fast), then assembles `app-debug.apk`, uploads gradle log + test reports + APK as artifacts, optionally publishes to Appetize.io when `APPETIZE_API_TOKEN` (and optionally `APPETIZE_PUBLIC_KEY`) are set as repo secrets.
+- **Matching scorer** (`matching/Scorer.kt`): pure-function port of the web prototype's `src/lib/scorer.ts`. Same six dimensions (40 / 25 / 15 / 10 / 5 / 5), same `bucketFor` helper. Both clients now rank an identical Firestore corpus identically.
+- **Domain model — first slice** (`model/`): `Vibe`, `Budget`, `Profile`, `Trip` data classes. Field names match the web prototype's `types.ts` for 1:1 Firestore parity (Sprint B).
+- **Unit tests**: `ScorerTest.kt` (14 cases) covers all six scoring dimensions, edge cases (zero overlap, empty vibes, language cap), and bucket boundaries (75/3, 55, !sameDestination). Run by CI via `./gradlew testDebugUnitTest`.
 
 ### What is fake or missing
 - **No persistence anywhere.** Every state lives in `TravelViewModel` and dies with the process. Trip publish, join requests, and chat input are all in-memory.
 - **No backend / no Firebase.** The "Tech Stack" lists Firebase Auth + Firestore + FCM; none of it is integrated. No `google-services.json`, no auth screens, no Firestore wiring, no FCM.
-- **No real matching scorer.** `MatchProfile.score` is a precomputed integer baked into sample data. The spec weights (40 / 25 / 15 / 10 / 5 / 5) are not implemented as a function.
-- **Domain model is 3 classes (`MatchProfile`, `PendingChatPreview`, `TripDraft`)** — spec lists 13 entities. `User`, `Profile`, `Trip`, `JoinRequest`, `Match`, `ChatThread`, `Message`, `Notification`, `Badge`, `UserBadge`, `Quest`, `UserProgress`, `Report` do not exist as types yet.
-- **No tests.** No `app/src/test/` or `app/src/androidTest/`. CI never runs `./gradlew test`.
+- **Scorer not yet wired into the UI.** `Scorer.score(...)` exists and is tested, but the Matches feed still renders three hardcoded `MatchProfile` rows. The wiring lands when the repository (Sprint A item 2) replaces sample data.
+- **Domain model still 4 of 13 entities.** Done: `Profile`, `Trip`, `Vibe` (enum support type), `Budget` (enum support type). Still missing: `User`, `JoinRequest`, `Match`, `ChatThread`, `Message`, `Notification`, `Badge`, `UserBadge`, `Quest`, `UserProgress`, `Report`. Legacy UI DTOs (`MatchProfile`, `PendingChatPreview`, `TripDraft`) coexist and will be retired or repurposed when Sprint B replaces sample data.
 - **No Onboarding / Signup / Login / Profile Setup / Settings screens.** Listed in MVP Features and Key Screens; not present.
 - **Notifications screen is unreachable.** `AppRoute.Notifications` route is registered but no UI navigates to it (no tab, no link). Dead code.
 - **Safety report + block list are static placeholder screens** — no intake form, no moderator queue, no block-list state.
@@ -150,10 +152,10 @@ Ordered so each sprint unblocks the next. Sprint A is the smallest unit that let
 ### Sprint A — foundations (do first)
 1. **Decide Firestore vs. Supabase.** Recommendation: **Firestore** — FCM is already in scope, Firebase Auth is the cheapest path to email + Google sign-in, and Compose / KMP samples lean Firebase. Document the decision and stop revisiting it.
 2. **Introduce a `Repository` interface + `InMemoryRepository` impl.** Move `matches` / `tripDraft` / `pendingChatPreview` off the ViewModel onto the repo. Keep the in-memory impl for previews + tests; the Firestore impl ships in Sprint B.
-3. **Build the matching scorer as a pure function.** New package `matching/`, new file `Scorer.kt`, signature roughly `fun score(viewer: Profile, viewerTrip: Trip, candidate: Profile, candidateTrip: Trip): MatchBreakdown`. Use the spec weights (40/25/15/10/5/5). Return a breakdown so the UI can show "why".
-4. **Add `app/src/test/` with JUnit + Truth (or kotlin-test).** First tests cover the scorer: identical trips, no overlap, partial date overlap, missing fields. Wire `./gradlew test` into the CI workflow before `assembleDebug`.
+3. ✅ **Build the matching scorer as a pure function.** Done in `matching/Scorer.kt`. Pure-function port of the web prototype's `src/lib/scorer.ts`; same weights (40/25/15/10/5/5), same `bucketFor` helper. Returns a `ScoreBreakdown` so the UI can show "why."
+4. ✅ **Add `app/src/test/` with JUnit.** Done. `ScorerTest.kt` has 14 cases covering all six dimensions + edge cases + bucket boundaries. Wired into CI as a `testDebugUnitTest` step that runs before `assembleDebug` (fail-fast).
 5. **Split `ui/TravelBuddyScreens.kt`** into `ui/screens/{HomeScreen,CreateTripScreen,MatchesScreen,ProfileScreen,JoinRequestScreen,ChatScreen,NotificationsScreen,SafetyScreen}.kt` plus shared `ui/components/` for `SectionTitle`, `EmptyStateCard`, `TimelineDot`. Mechanical refactor; no behavior change.
-6. **Flesh out the domain model** — Kotlin data classes for `User`, `Profile`, `Trip`, `JoinRequest`, `ChatThread`, `Message`, `Notification`, `Report` in `model/`. Match spec entity names exactly so Firestore collections map 1:1 later.
+6. ⏳ **Flesh out the domain model** — Kotlin data classes for `User`, `Profile`, `Trip`, `JoinRequest`, `ChatThread`, `Message`, `Notification`, `Report` in `model/`. Match spec entity names exactly so Firestore collections map 1:1 later. **Status:** `Profile`, `Trip`, `Vibe`, `Budget` done (needed by the Sprint A scorer). `User`, `JoinRequest`, `ChatThread`, `Message`, `Notification`, `Report` still pending.
 
 ### Sprint B — auth + persistence
 7. **Firebase Auth (email + Google).** Add Onboarding / Signup / Login screens. Gate the rest of the app behind an auth state.

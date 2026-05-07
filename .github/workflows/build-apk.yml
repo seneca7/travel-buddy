@@ -43,6 +43,24 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
+      - name: Run unit tests
+        shell: bash
+        run: |
+          set -o pipefail
+          ./gradlew testDebugUnitTest --no-daemon --stacktrace 2>&1 | tee gradle-test.log
+
+      - name: Upload test results (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-test-reports
+          path: |
+            app/build/reports/tests/
+            app/build/test-results/
+            gradle-test.log
+          retention-days: 14
+          if-no-files-found: warn
+
       - name: Build debug APK
         shell: bash
         run: |
