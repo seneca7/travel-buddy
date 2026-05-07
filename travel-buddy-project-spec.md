@@ -197,6 +197,58 @@ Until then, calling Phase 1 "done" is misleading.
 
 ---
 
+## Web prototype — Sprint 4: Onboarding, Profile setup, Locals supply (snapshot 2026-05-07 night)
+
+Three additions that close the prototype gap to "actually usable for first-time users" and add the supply-side moat:
+
+### Onboarding wizard — `/app/welcome`
+- 5-step framer-motion animated flow: Welcome → About you (name + bio) → Travel style (vibes/budget/languages) → First trip (destination + dates) → Done.
+- First-run auto-redirect: `/app` redirects to `/app/welcome` when `state.onboarded === false`. Persisted to `localStorage.mappal_onboarded`.
+- Step validation per page (can't advance until required fields are valid).
+- Final step calls `setOnboarded(true)` + `publish()` so the new user lands on Home with their first trip already published.
+- "Replay onboarding" available in AccountMenu (resets the flag and routes back to wizard).
+
+### Profile setup — `/app/me`
+- Standalone editor for the user's editable profile fields: name, bio, vibes, budget, languages.
+- Live "How travelers will see you" preview card.
+- Account actions: Replay onboarding, Sign out (with current email shown).
+- Sticky save bar with dirty detection + "Saved ✓" confirmation.
+
+### Profile state architecture
+- New `myProfile` overrides on store + `mergeMe(overrides)` derivation.
+- Store now exposes a `me: Profile` getter that all pages use instead of the static `ME` constant. Home / Matches / Profile detail / Map all switched.
+- `MyProfileOverrides` typed subset (name, bio, vibes, budget, languages) — what the user can edit.
+- `patchProfile(patch)` reducer action for incremental edits.
+- `setOnboarded(value)` reducer action with localStorage side-effect.
+
+### Locals supply layer — residents offering experiences
+- `Profile.userType?: "traveler" | "local"` (defaults to traveler).
+- 4 sample locals with verified profiles, low-content high-trust vibes:
+  - **Tiago** (Lisbon barista) — pastéis crawl + hidden tasca dinner
+  - **Mariana** (Lisbon, Costa da Caparica) — beginner surf sessions
+  - **Akiko** (Tokyo) — kissaten coffee crawl + photo wander
+  - **Wayan** (Bali, Ubud) — Mt Batur sunrise hike + breakfast
+- Locals' "trips" cover a long current window (2026-05-01 → 2026-12-31) so they appear in matching for any traveler with overlapping dates.
+- Locals' itineraries are recurring `openToBuddy` experiences with `maxBuddies` caps. Same data shape as traveler activities — full reuse of Plan / Profile / Inbox / Join machinery.
+- Helper `localsInDestination(destinationId)` — used by Home + Map.
+
+### UI surfaces for locals
+- **Home** has a new horizontal carousel "Locals showing <City>" — photo card + Local badge + "Hosting: <experience>" hover.
+- **Map** has new local marker style: avatar with warm-yellow ring + "L" badge corner. Popup shows "Local · <City>" badge + bio + "See what they offer" CTA.
+- **Profile detail** shows orange "Local · <City>" badge in hero (instead of trip count) when `userType === "local"`.
+- **Profile + Join** flows resolve locals via `SAMPLE_LOCAL_TRIPS` fallback.
+- **Map header** now reads "N travelers · M locals · K open plans" — locals visibly counted alongside travelers and activities.
+
+### Distribution effect
+This doubles the supply-side density of the Map without needing more travelers. A leisure traveler arriving in Lisbon for 5 days now sees: 4 travelers + 2 locals + 11+ open plans. The cold-start objection — "I'd love to use this but no one's on it yet in my city" — gets weaker the moment a few residents per city sign up.
+
+### Sprint 5 still pending
+- "I met them" reciprocal confirmation → reputation signals (the social proof loop)
+- Hostel partnership integration (push our supply layer through their distribution)
+- Real backend (Firebase Auth + Firestore) — at this point the prototype's design is complete enough to wire to real data
+
+---
+
 ## Web prototype — competitive positioning + open-plans on map (snapshot 2026-05-07 late)
 
 **Strategic update against Overlap (getoverlap.app) — the closest competitor**, acquired by Pangea NYC. Overlap is built on a **friend-graph** premise: it tells you when *your existing connections* overlap your trip. That's its strength (warm community) and its structural weakness (cold-start fails, leisure-traveler audience underserved).
