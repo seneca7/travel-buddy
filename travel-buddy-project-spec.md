@@ -197,6 +197,38 @@ Until then, calling Phase 1 "done" is misleading.
 
 ---
 
+## Web prototype — competitive positioning + open-plans on map (snapshot 2026-05-07 late)
+
+**Strategic update against Overlap (getoverlap.app) — the closest competitor**, acquired by Pangea NYC. Overlap is built on a **friend-graph** premise: it tells you when *your existing connections* overlap your trip. That's its strength (warm community) and its structural weakness (cold-start fails, leisure-traveler audience underserved).
+
+**Mappal positioning sharpened to anti-Overlap**: "Plan your trip. Open one day. Find your crew." Cold-start friendly. No friends required. Activity-level matching, not trip-level. Same backend value-prop, completely different audience target — leisure travelers (vacationers, weekenders, solo women, families) are 20× the nomad audience Overlap serves.
+
+### Landing copy rewrites
+- **Hero headline**: `Travel like you have friends in every city` → `Plan your trip. Open one day. Find your crew.` Three concrete actions matching the actual app loop, not a vague aspiration.
+- **Hero subhead** explicitly addresses the cold-start objection: *"No friends on the app yet? Doesn't matter."*
+- **BentoGrid section header**: `Not another dating-style swipe app.` → `Not a swipe app. Not a friends-only network.` Two-axis differentiation.
+- **First Bento cell** repositioned from generic "Trip-first matching" to **"No friend-graph required"** with cold-start callout.
+- **"Plans, not vibes" cell** rewritten as **"Open one day, or all of them"** — moved the activity-level open-to-buddy mechanic to the visual front of the marketing argument. Demo chips show OPEN vs. private states.
+- **Anti-pattern card** added "Friend-graph required" to the strikethrough list.
+- **CTA section** bullet list changed from generic onboarding promises to four positioning beats: works for solo/weekend/full vacation, zero friends needed, activity-level matching, mutual consent.
+
+### Open activities pinned on the map (deeper moat)
+- `TravelersMap` accepts `mode: "travelers" | "plans" | "both"`.
+- New marker style: terracotta drop-pin with vibe emoji centered. Clicking shows activity title + date + slot + time + place + owner avatar + **"Ask to join"** CTA that deep-links to `/app/join/<peer>?activityId=<id>` (skips proposal step, pre-fills meetup with activity location).
+- `/app/map` now has 3-state toggle: Both / Open plans / Travelers. Default is Both.
+- Header reads `N travelers · M open plans` for the user's city.
+- Hash-based scatter so multiple activities in the same destination spread visually instead of stacking.
+- This is the feature Overlap can't easily ship — they'd have to rebuild their plan model (currently free-text trips) into structured open-to-buddy activities.
+
+### Sprint 4 still pending (called out for next push)
+- "I met them" reciprocal confirmation → reputation points
+- Onboarding wizard for first-time users
+- Profile setup screen (bio/vibes/budget)
+- Local-meets-traveler supply layer ("locals open up to show their city")
+- Hostel partnership integration
+
+---
+
 ## Web prototype — Mappal Sprint 1 + 2 + Map (snapshot 2026-05-07 evening)
 
 **New since this morning** — applied the full UX re-architecture from the deep analysis:
