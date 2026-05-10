@@ -197,6 +197,39 @@ Until then, calling Phase 1 "done" is misleading.
 
 ---
 
+## Web prototype — Sprint 7a: Live-location sharing + Propose-meetup (snapshot 2026-05-08)
+
+Turns the two placeholder chat tool buttons into working features. Both implemented as **"chat extras"** — rich cards interleaved into the message stream by timestamp, rendered in both the local-echo and Firestore real-time modes.
+
+### Data model
+- New `ChatExtra` discriminated union in `types.ts`: `{ kind: "location", lat, lng, expiresAt, active, label? }` and `{ kind: "meetup", date, time?, place?, note?, status }`.
+- Store gains `chatExtras: Record<peerId, ChatExtra[]>` plus actions: `startLocationShare`, `updateLocationShare`, `stopLocationShare`, `proposeMeetup`, `respondMeetup`.
+- Chat page builds a unified `stream` of `{kind:"msg"}` and `{kind:"extra"}` items sorted by `ts` so cards drop in chronologically next to text bubbles.
+
+### Live-location sharing
+- "Share location" tool button: first tap → `navigator.geolocation.getCurrentPosition` → `startLocationShare` with a 60-min window → a `watchPosition` effect in the Chat page takes over feeding `updateLocationShare` on every fix. Second tap (or auto-expiry) → `stopLocationShare`. Button shows active state (filled terracotta) while sharing.
+- `LocationShareCard` component: header ("You're sharing live location · expires in 47m · only Sara can see this"), a non-interactive **MiniMap** (tiny Leaflet with one marker, dynamically imported, `ssr: false`), and a "Stop sharing" control (sharer only). Ticks every 30s to refresh the countdown and auto-stops past expiry. After expiry it collapses to "last seen lat, lng".
+- `MiniMap` is a reusable component — also useful for future location features.
+
+### Propose-meetup
+- "Propose meetup" tool button → `MeetupProposeSheet` (framer-motion bottom sheet): date picker (required), optional time, place, note. Defaults pre-filled from the join request's `meetupSuggestion` and the meeting's `proposedDate` when available.
+- Submit → `proposeMeetup` creates a `meetup` extra (status `pending`) → renders as a `MeetupProposalCard` in the stream.
+- `MeetupProposalCard`: the recipient sees **Accept / Can't**. On Accept → status flips to `accepted` AND the meetup is dropped into the user's itinerary (slot inferred from time-of-day; itinerary array re-padded to stay contiguous for the Plan view), tagged with the peer as buddy. Card then shows "Added to your trip plan". The proposer side just shows the status.
+- "I feel unsafe" button now has a placeholder click handler (alerts; routes to /app/safety in the full build) instead of being a dead control.
+
+### Notes / scope
+- Chat extras are **local-store only** (not synced via Firestore) — they're interactive UI state, not text. When Firebase is configured, text messages persist + sync in real time; the location/meetup cards live in the in-memory store. Documented as a Sprint 8 item if cross-device sync of these is wanted.
+- Geolocation requires HTTPS (or localhost) and a user grant — standard browser behavior.
+
+### Sprint 7 remaining / Sprint 8 backlog
+- Hostel partnership integration
+- Sync chat extras (location shares + meetup proposals) through Firestore for cross-device
+- Custom Firebase Auth tokens → scoped Firestore reads (replace public-read Path B)
+- Migrate join requests + meetings to Firestore (currently in-memory; chat text + profile persist)
+- Real "I feel unsafe" escalation flow (currently a placeholder alert)
+
+---
+
 ## Web prototype — Sprint 6: Real-time chat + FCM push (snapshot 2026-05-08)
 
 Replaces the local-echo chat with Firestore-backed real-time threads and adds Firebase Cloud Messaging. Both env-gated — without Firebase the prototype keeps the in-memory echo behavior.
