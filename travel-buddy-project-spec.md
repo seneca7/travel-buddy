@@ -197,6 +197,36 @@ Until then, calling Phase 1 "done" is misleading.
 
 ---
 
+## Web prototype — DEPLOYED on Vercel at mappal.app (snapshot 2026-05-10)
+
+The prototype is now **live in production** at [mappal.app](https://mappal.app) — Vercel project `travel-buddy-web` under `mikelackovcans-projects`, auto-deploying from `mikeLackovcan/travel-buddy-web@main`.
+
+### What was wrong + the fix
+Vercel had been auto-deploying every push since the rebrand, but **every build since Sprint ~3 was failing** — so mappal.app was stuck on an ancient pre-rebrand deploy. Root cause: `src/auth.ts` had a module-load `throw new Error("AUTH_SECRET is required in production")`, which `next build` hits during page-data collection (`next build` runs in production mode without runtime env vars). Fixed: downgraded that to `console.error` + the existing `DEV_SECRET` fallback so builds succeed; AUTH_SECRET should still be set in the host env for secure/stable JWTs (it now is — see below).
+
+### Env vars set on Vercel production
+All 14 keys from `.env.local` were pushed to the Vercel project (production env) via `vercel env add`: `AUTH_SECRET`, `AUTH_URL=https://mappal.app`, `AUTH_FACEBOOK_ID/SECRET`, `NEXT_PUBLIC_FACEBOOK_AUTH_ENABLED`, the 6 `NEXT_PUBLIC_FIREBASE_*`, `FIREBASE_ADMIN_PROJECT_ID/CLIENT_EMAIL/PRIVATE_KEY`, `NEXT_PUBLIC_GA_MEASUREMENT_ID`. `NEXT_PUBLIC_FIREBASE_VAPID_KEY` left unset (FCM stays off). Local codebase is now `vercel link`ed to the project (`.vercel/` gitignored).
+
+### Verified live on mappal.app
+- Homepage, `/app`, `/app/map`, `/app/welcome`, `/app/inbox`, `/app/plan`, `/app/profile/[id]`, `/app/chat/[id]`, `/app/me`, `/signup`, `/firebase-messaging-sw.js` — all 200
+- New hero copy ("Plan your trip. Open one day. Find your crew.") is serving
+- GA4 tag (`G-XVFVCXE0KJ`) injected
+- `/api/auth/providers` returns Facebook with `callbackUrl: https://mappal.app/api/auth/callback/facebook` (correct domain, not the .vercel.app one — `trustHost: true` + `AUTH_URL` handle it)
+
+### Still operator-side (now narrowed)
+1. **Verify Meta App has `https://mappal.app/api/auth/callback/facebook`** in Valid OAuth Redirect URIs (it was added earlier; double-check). Also: the Meta app is in Development mode → only registered **Testers** can log in. For public access → Meta App Review.
+2. **Google OAuth not wired** — `.env.local` (and hence Vercel) has no `AUTH_GOOGLE_ID/SECRET`, so the Google signup button stays in demo mode. Add those + `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true` (locally and on Vercel) to enable it; add `https://mappal.app/api/auth/callback/google` to the Google Cloud OAuth client.
+3. **FCM VAPID key** — generate in Firebase console (Project settings → Cloud Messaging → Web config → Generate key pair), add to `.env.local` + Vercel as `NEXT_PUBLIC_FIREBASE_VAPID_KEY`, redeploy.
+4. **(Confirmed done by operator)** Firestore Database enabled + security rules set.
+5. **(Optional)** Switch chat Firestore rules to the scoped variant once the Firebase Auth bridge is verified (Firebase console → Authentication shows the email under Custom provider after sign-in).
+
+### Redeploy mechanics for future reference
+- `git push origin main` → Vercel auto-builds + deploys to production
+- Or `vercel --prod` from the project dir → deploys the current local tree
+- Env var changes need a redeploy to take effect (`vercel --prod` or any push)
+
+---
+
 ## Web prototype — Sprint 8: "I feel unsafe" flow + Firebase Auth bridge (snapshot 2026-05-08)
 
 ### "I feel unsafe" — real safety flow (replaces placeholder alert)
