@@ -197,6 +197,40 @@ Until then, calling Phase 1 "done" is misleading.
 
 ---
 
+## Web prototype — Sprint 8: "I feel unsafe" flow + Firebase Auth bridge (snapshot 2026-05-08)
+
+### "I feel unsafe" — real safety flow (replaces placeholder alert)
+- `SafetySheet` bottom sheet, opened from the chat tool button. Four quick actions, each with real copy + confirmation states (demo behaviors are local; this is the production shape):
+  - **Life-safety emergency** — call local emergency number (confirm dialog; no call in demo)
+  - **Alert my emergency contact** — sends name + current trip + check-in request → green confirmation
+  - **Block `<name>`** — removes from chats + search, peer not notified → confirmation; calls `onBlock` so callers can hide the thread
+  - **Report this conversation** — routes to moderator queue with message history → confirmation
+  - Plus "Open Safety center" link → `/app/safety`
+- Privacy framing throughout: "Mappal never shows `<name>` that you opened this, blocked, or reported. Public-daytime meetups stay the default."
+
+### Firebase Auth bridge — custom tokens for scoped Firestore reads
+- **`/api/firebase-token`** route — mints a Firebase custom token from the Auth.js session via Admin SDK `createCustomToken(email, { email })`. Returns `{ ok:false }` (200) when Firebase isn't configured so the client just stays in the public-read fallback.
+- **`FirebaseAuthBridge`** client component (mounted in `(app)/layout` next to `FcmRegistrar`) — on sign-in, checks if a Firebase Auth session already exists; if not, fetches the custom token and calls `signInWithCustomToken`. Now `request.auth` is populated in Firestore rules.
+- README documents the **scoped chat rules variant** (`request.auth.token.email in resource.data.participants`) the operator can switch to once they've verified the bridge works (Firebase console → Authentication shows the email under the Custom provider). Default rules stay public-read so nothing breaks before the switch.
+- This replaces the Path B compromise (public chat reads) with a real auth path — last infrastructure piece needed before a public launch.
+
+### Still pending (Sprint 9+) — and the operator dependencies
+- **Migrate join requests + meetings to Firestore** (currently in-memory; chat text + profile + the new auth path persist)
+- **Sync chat extras** (location shares + meetup proposals) cross-device via Firestore
+- **Hostel partnership integration** (business + a "partner hostels" data/UI layer)
+- **Real moderator backend** for reports (the SafetySheet writes locally for now)
+
+**Operator-side blockers** (nothing in code can do these — they need the project owner's accounts):
+1. **Firestore Database not enabled** in the Firebase console → without it every Admin/client Firestore call throws at runtime. Build → Firestore Database → Create database (Production mode).
+2. **Firestore security rules not set** → default Production-mode rules deny everything; paste the rules from README.
+3. **FCM VAPID key not generated** → no OS push. Project settings → Cloud Messaging → Web config → Generate key pair → put in `.env.local` as `NEXT_PUBLIC_FIREBASE_VAPID_KEY`.
+4. **Meta App: self not added as Tester** → Facebook login fails in dev until you add yourself (App Roles → Roles → Add Testers).
+5. **Meta App Review** → required for production Facebook/Instagram OAuth (`email` + `public_profile`); 2-4 weeks. Not needed for testing.
+6. **No public deployment** → app runs `next dev` locally only. Vercel: import `mikeLackovcan/travel-buddy-web`, set the `.env.local` vars in the Vercel dashboard, deploy, point a domain. Then add production OAuth redirect URIs in Google Cloud + Meta dashboards.
+7. **Custom domain** → `mappal.app` referenced throughout (canonical, OG, manifest) but not actually pointed at the app yet.
+
+---
+
 ## Web prototype — Sprint 7a: Live-location sharing + Propose-meetup (snapshot 2026-05-08)
 
 Turns the two placeholder chat tool buttons into working features. Both implemented as **"chat extras"** — rich cards interleaved into the message stream by timestamp, rendered in both the local-echo and Firestore real-time modes.
