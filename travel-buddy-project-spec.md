@@ -197,6 +197,34 @@ Until then, calling Phase 1 "done" is misleading.
 
 ---
 
+## Web prototype — Sprint 6: Real-time chat + FCM push (snapshot 2026-05-08)
+
+Replaces the local-echo chat with Firestore-backed real-time threads and adds Firebase Cloud Messaging. Both env-gated — without Firebase the prototype keeps the in-memory echo behavior.
+
+### Real-time chat (Firestore listeners)
+- **`chatRepo.ts`** (Admin SDK): `threadIdFor(a, b)` (sorted-join, deterministic), `ensureThread`, `sendMessage` (writes `chats/{tid}/messages/{id}` with `FieldValue.serverTimestamp()` + `sentAtClient` fallback), `listRecentMessages`.
+- **`sendChatMessageAction(toUid, body, fromName)`** server action — auths the Auth.js session, writes via Admin SDK, then best-effort FCM push to the recipient. Returns `{ ok, persisted, threadId, messageId }` so the client knows whether it hit Firestore or should fall back.
+- **`useChatThread({ myUid, peerUid })`** client hook — subscribes to `chats/{tid}/messages` via `onSnapshot` ordered by `sentAt`, returns `{ messages, enabled }`. `enabled` is false when Firebase client config is missing → Chat page falls back to the local store.
+- **Chat thread page** reworked: when `enabled`, renders the live messages and sends via the server action (no optimistic echo — listener reconciles in ~100ms); a small `live` badge appears in the peer header. When not enabled, the original local-echo path is untouched. The "simulate accept" demo button still works in both modes.
+- **Path B (no Firebase Auth)**: client reads are public per Firestore rules; all writes go through the Admin SDK in server actions. Fine for a prototype with no real users; documented as needing tightening before launch.
+- **Auth identity**: `uid = session.user.email` (consistent with Sprint 5). Thread id for "me@gmail.com" + "u-sara" is `me@gmail.com__u-sara`. Sample peers won't reply (they're static), but the user's own messages persist + sync.
+
+### Firebase Cloud Messaging
+- **`fcmRepo.ts`** (Admin SDK): `registerFcmToken(uid, token)` / `unregisterFcmToken` (array-union/remove on `users/{uid}.fcmTokens`), `sendPushToUid({ toUid, title, body, link, tag, data })` — fans out to all of the user's tokens, prunes `registration-token-not-registered` failures from the array automatically.
+- **`/api/auth/firebase-messaging-sw.js` route** — wait, no: **`/firebase-messaging-sw.js`** is served by `src/app/firebase-messaging-sw.js/route.ts`, a route handler that injects the public Firebase config at request time (with `Service-Worker-Allowed: /` header). Returns a valid no-op SW when Firebase isn't configured, so `register()` never throws.
+- **`FcmRegistrar`** client component (mounted in `(app)/layout.tsx`) — on sign-in, when Firebase + `NEXT_PUBLIC_FIREBASE_VAPID_KEY` are set: registers the SW, requests notification permission, gets a device token via `getToken({ vapidKey, serviceWorkerRegistration })`, persists it via `registerFcmTokenAction` server action, and wires `onMessage` for foreground notifications. No-ops entirely otherwise.
+- **`sendChatMessageAction`** emits a push to the recipient with `link: /app/chat/{fromUid}` and `tag: chat-{threadId}` (collapses multiple messages from the same thread).
+- New env vars: `NEXT_PUBLIC_FIREBASE_VAPID_KEY` (browser push key). Documented in `.env.example` + README "Firebase Cloud Messaging" section.
+
+### Sprint 7 still pending
+- Hostel partnership integration (push the locals supply layer through their distribution)
+- Live-location sharing during meetups (the "Share location" tool button is still a placeholder)
+- "Propose meetup" flow (calendar-style date+place picker, also still a placeholder button)
+- Custom Firebase Auth tokens — minting from Auth.js so Firestore security rules can scope reads per-participant (replaces the current public-read Path B)
+- Migrate join requests + meetings to Firestore (currently in-memory; only chat + profile persist)
+
+---
+
 ## Web prototype — Sprint 5: Reputation + Firebase scaffold (snapshot 2026-05-07 late night)
 
 Closes the social loop with verified meets, and adds the persistence layer so user profile actually survives across sessions when Firebase is provisioned.
