@@ -1,127 +1,72 @@
 package com.travelbuddy
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.travelbuddy.model.MatchProfile
 import com.travelbuddy.model.PendingChatPreview
+import com.travelbuddy.repository.InMemoryRepository
+import com.travelbuddy.repository.Repository
 import com.travelbuddy.trips.TripDraft
 import com.travelbuddy.trips.TripFormatting
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 /**
- * Trip dashboard copy + readiness:
+ * Presentation layer. Reads raw state from [Repository] and exposes derived
+ * presentation state (dashboard headline, readiness percentage) via
+ * [TripFormatting].
  *
- * Until [publishTrip] succeeds once ([publishedTripSnapshot] is still null]), Home stays on the fixed
- * onboarding teaser headline + demo readiness — draft edits stored in VM do not overwrite Home yet.
+ * Pre-publish: Home shows the fixed onboarding teaser headline + a demo
+ * readiness value. Post-publish: both derive from the latest snapshot in
+ * [Repository.publishedTrip].
  *
- * After publish, headline/readiness derive from [publishedTripSnapshot] via [TripFormatting] (immutable
- * on Home until another successful publish replaces the snapshot).
- *
- * Matches feed stays sample data until Firebase.
+ * Default constructor wires an [InMemoryRepository] so Compose's `viewModel()`
+ * keeps working with no factory. Sprint B's `FirestoreRepository` will inject
+ * via Hilt; the test suite injects fakes directly.
  */
-class TravelViewModel : ViewModel() {
+class TravelViewModel(
+    private val repository: Repository = InMemoryRepository(),
+) : ViewModel() {
 
-    private val _tripDraft = MutableStateFlow(TripDraft.defaults())
-    val tripDraft: StateFlow<TripDraft> = _tripDraft.asStateFlow()
+    val tripDraft: StateFlow<TripDraft> = repository.tripDraft
+    val matches: StateFlow<List<MatchProfile>> = repository.matches
+    val pendingChatPreview: StateFlow<PendingChatPreview?> = repository.pendingChatPreview
 
-    private val _publishedTripSnapshot = MutableStateFlow<TripDraft?>(null)
-
-    /** Pre-publish: demo teaser; post-publish: [TripFormatting.headlinePreview] on last published trip. */
     private val _tripHeadline = MutableStateFlow(TripDraft.DemoDashboardHeadline)
     val tripHeadline: StateFlow<String> = _tripHeadline.asStateFlow()
 
-    /** Pre-publish: fixed onboarding progress; post-publish: [TripFormatting.readiness01]. */
     private val _readiness = MutableStateFlow(DEFAULT_DEMO_READINESS)
     val readiness: StateFlow<Float> = _readiness.asStateFlow()
 
-    private val _matches = MutableStateFlow<List<MatchProfile>>(emptyList())
-    val matches: StateFlow<List<MatchProfile>> = _matches.asStateFlow()
-
-    /** Shown on Chat until real messaging exists — seeded when user taps Send on join flow. */
-    private val _pendingChatPreview = MutableStateFlow<PendingChatPreview?>(null)
-    val pendingChatPreview: StateFlow<PendingChatPreview?> = _pendingChatPreview.asStateFlow()
-
     init {
-        loadSampleData()
-        refreshTripPresentation()
-    }
-
-    fun updateDraft(transform: TripDraft.() -> TripDraft) {
-        _tripDraft.value = TripDraft.trimFields(transform(_tripDraft.value))
-    }
-
-    /**
-     * Validates current draft and, on success, copies it into the published snapshot that drives Home.
-     */
-    fun publishTrip(): TripDraft.Validation {
-        return when (val verdict = _tripDraft.value.validate()) {
-            is TripDraft.Validation.Error -> verdict
-            is TripDraft.Validation.Ok -> {
-                val published = TripDraft.trimFields(_tripDraft.value)
-                _publishedTripSnapshot.value = published
-                _tripDraft.value = published
-                refreshTripPresentation()
-                TripDraft.Validation.Ok
+        viewModelScope.launch {
+            repository.publishedTrip.collect { pub ->
+                if (pub == null) {
+                    _tripHeadline.value = TripDraft.DemoDashboardHeadline
+                    _readiness.value = DEFAULT_DEMO_READINESS
+                } else {
+                    _tripHeadline.value = TripFormatting.headlinePreview(pub)
+                    _readiness.value = TripFormatting.readiness01(pub)
+                }
             }
         }
     }
 
-    private fun refreshTripPresentation() {
-        val pub = _publishedTripSnapshot.value
-        if (pub == null) {
-            _tripHeadline.value = TripDraft.DemoDashboardHeadline
-            _readiness.value = DEFAULT_DEMO_READINESS
-        } else {
-            _tripHeadline.value = TripFormatting.headlinePreview(pub)
-            _readiness.value = TripFormatting.readiness01(pub)
-        }
+    fun updateDraft(transform: TripDraft.() -> TripDraft) {
+        repository.updateTripDraft(transform)
     }
 
-    private fun loadSampleData() {
-        _matches.value = listOf(
-            MatchProfile(
-                id = "1",
-                name = "Alina Petrova",
-                score = 87,
-                reason = "5-day overlap · Verified · Food and museums",
-            ),
-            MatchProfile(
-                id = "2",
-                name = "Marek Group",
-                score = 82,
-                reason = "3 travelers · Porto extension · Mid budget",
-            ),
-            MatchProfile(
-                id = "3",
-                name = "Jonas Costa",
-                score = 79,
-                reason = "Exact dates · Surf mornings · EN/PT",
-            ),
-        )
-    }
+    fun publishTrip(): TripDraft.Validation = repository.publishTrip()
 
-    fun matchById(id: String): MatchProfile? = _matches.value.find { it.id == id }
+    fun matchById(id: String): MatchProfile? = repository.matchById(id)
 
     fun matchSummaryLine(profile: MatchProfile): String =
         "${profile.name} · ${profile.score}"
 
-    /** Persists lightweight context for Chat header/snippet wiring (Firestore thread id later). */
     fun rememberJoinSent(matchId: String, peerDisplayName: String?, messageBody: String) {
-        val peer = peerDisplayName ?: "Traveler"
-        val snippet = messageBody.trim().let {
-            when {
-                it.isEmpty() -> "(empty message)"
-                it.length <= 140 -> it
-                else -> it.take(137) + "…"
-            }
-        }
-        _pendingChatPreview.value = PendingChatPreview(
-            matchId = matchId,
-            peerDisplayName = peer,
-            lastSentSnippet = snippet,
-            sentAtMillis = System.currentTimeMillis(),
-        )
+        repository.rememberJoinSent(matchId, peerDisplayName, messageBody)
     }
 
     companion object {
